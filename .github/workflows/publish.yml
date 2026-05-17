@@ -19,7 +19,8 @@ jobs:
       - run: uv python install 3.12
       - run: uv build
       - uses: pypa/gh-action-pypi-publish@release/v1
-      - name: Smoke test doctor
+      - name: Smoke test installed package
         run: |
           uv pip install dist/*.whl --system
-          langmcp doctor || true
+          langmcp --version
+          langmcp doctor

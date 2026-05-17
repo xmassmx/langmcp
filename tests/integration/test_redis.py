@@ -7,11 +7,10 @@ import os
 import pytest
 
 from langmcp.profiles import ProfileManager
-from langmcp.tools.context import ToolContext
 from langmcp.tools import threads
+from langmcp.tools.context import ToolContext
 
-
-REDIS_URI = os.environ.get("REDIS_URI", "redis://localhost:6380/0")
+REDIS_URI = os.environ.get("REDIS_URI", "redis://localhost:6379/0")
 
 
 @pytest.mark.integration
@@ -44,5 +43,8 @@ checkpointer = "{REDIS_URI}"
     )
     pm = ProfileManager(config_path=config)
     ctx = ToolContext(pm)
+    listed = threads.list_threads(ctx, profile="redis")
+    thread_ids = [t["thread_id"] for t in listed["threads"]]
+    assert "test-1" in thread_ids
     state = threads.get_thread_state(ctx, "test-1")
     assert "state" in state

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import uuid
 
 
 def build_graph(checkpointer, store=None):
@@ -45,9 +44,10 @@ def seed(backend: str) -> None:
         from langgraph.checkpoint.postgres import PostgresSaver
         from langgraph.store.postgres import PostgresStore
 
-        with PostgresSaver.from_conn_string(uri) as cp, PostgresStore.from_conn_string(
-            uri
-        ) as store:
+        with (
+            PostgresSaver.from_conn_string(uri) as cp,
+            PostgresStore.from_conn_string(uri) as store,
+        ):
             cp.setup()
             store.setup()
             graph = build_graph(cp, store)

@@ -47,9 +47,7 @@ def analyze_memory_gaps_tool(
         snap = checkpoint_tuple_to_snapshot(tup)
         metadata = snap.get("metadata", {}) if isinstance(snap, dict) else {}
         config = snap.get("config", {}) if isinstance(snap, dict) else {}
-        configurable = (
-            config.get("configurable", {}) if isinstance(config, dict) else {}
-        )
+        configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
         ns: tuple[str, ...] | None = None
         if expected_namespace:
             ns = tuple(p for p in expected_namespace.split("/") if p)

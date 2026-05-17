@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Publish workflow: `langmcp doctor` smoke test fails on connectivity errors (no `|| true`)
+- Health check and `doctor`: connectivity via read-only probes; `setup()` failures are warnings when reads succeed
+- Sanitize exception messages in health/doctor output (strip URIs and passwords)
+- Integration tests: assert seeded store key `theme`; default Redis URL `redis://localhost:6379/0`
+- Config: `${DATABASE_URL}` falls back to `POSTGRES_URI` when unset
+- Redis thread discovery: SCAN deadline; document `checkpoint:` key prefix
+- CLI: remove unused import; avoid double profile config load on `serve --profile`
+- Examples and `pyproject.toml` URLs aligned with README and repository
+
 ## [0.1.0] - 2026-05-17
 
 ### Added

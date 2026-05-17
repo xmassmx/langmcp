@@ -75,9 +75,7 @@ class ProfileManager:
         profile_name = self.active_profile_name(name)
         if profile_name not in self._profiles:
             available = ", ".join(sorted(self._profiles)) or "(none)"
-            raise KeyError(
-                f"Profile '{profile_name}' not found. Available profiles: {available}"
-            )
+            raise KeyError(f"Profile '{profile_name}' not found. Available profiles: {available}")
         raw = self._profiles[profile_name]
         resolved = apply_env_overrides(raw, self._settings)
         return profile_name, resolved
@@ -89,9 +87,7 @@ class ProfileManager:
                 {
                     "name": name,
                     "checkpointer_backend": backend_type_from_uri(cfg.checkpointer),
-                    "store_backend": (
-                        backend_type_from_uri(cfg.store) if cfg.store else "none"
-                    ),
+                    "store_backend": (backend_type_from_uri(cfg.store) if cfg.store else "none"),
                     "has_store": str(cfg.store is not None).lower(),
                 }
             )
@@ -104,9 +100,7 @@ class ProfileManager:
             "checkpointer_uri_redacted": redact_uri(cfg.checkpointer),
             "store_uri_redacted": redact_uri(cfg.store) if cfg.store else None,
             "checkpointer_backend": backend_type_from_uri(cfg.checkpointer),
-            "store_backend": (
-                backend_type_from_uri(cfg.store) if cfg.store else None
-            ),
+            "store_backend": (backend_type_from_uri(cfg.store) if cfg.store else None),
             "has_store": cfg.store is not None,
             "read_only": self.read_only_enforced,
             "max_response_chars": self._defaults.max_response_chars,

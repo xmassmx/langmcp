@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import sqlite3
+import time
 from typing import Any
 from urllib.parse import urlparse
+
+# LangGraph RedisSaver persists checkpoints under keys like checkpoint:{thread_id}:...
+_REDIS_CHECKPOINT_KEY_PREFIX = "checkpoint:"
 
 # LangGraph checkpoint-postgres table (v2+)
 _POSTGRES_THREADS_SQL = """
@@ -68,10 +72,7 @@ def list_threads_sqlite(uri: str, *, limit: int = 50, offset: int = 0) -> list[d
         rows = cur.fetchall()
     finally:
         conn.close()
-    return [
-        {"thread_id": row["thread_id"], "last_updated": row["last_updated"]}
-        for row in rows
-    ]
+    return [{"thread_id": row["thread_id"], "last_updated": row["last_updated"]} for row in rows]
 
 
 def list_threads_redis(
@@ -81,17 +82,25 @@ def list_threads_redis(
     offset: int = 0,
     scan_count: int = 500,
     max_keys: int = 10000,
+    scan_deadline_seconds: float = 30.0,
 ) -> tuple[list[dict[str, Any]], str | None]:
     """Discover threads via Redis key scan. Returns (threads, warning)."""
     import redis
 
     client = redis.from_url(uri)
     warning: str | None = None
-    prefix = "checkpoint:"
+    prefix = _REDIS_CHECKPOINT_KEY_PREFIX
     thread_ids: set[str] = set()
     scanned = 0
     cursor = 0
+    deadline = time.monotonic() + scan_deadline_seconds
     while True:
+        if time.monotonic() >= deadline:
+            warning = (
+                f"Redis SCAN stopped after {scan_deadline_seconds:g}s deadline; "
+                "results may be incomplete."
+            )
+            break
         cursor, keys = client.scan(cursor=cursor, match=f"{prefix}*", count=scan_count)
         scanned += len(keys)
         for key in keys:
@@ -101,7 +110,7 @@ def list_threads_redis(
                 thread_ids.add(parts[1])
         if cursor == 0 or scanned >= max_keys:
             break
-    if scanned >= max_keys:
+    if scanned >= max_keys and not warning:
         warning = (
             f"Redis SCAN capped at {max_keys} keys; results may be incomplete. "
             "Use a dedicated Redis instance for development checkpoints."

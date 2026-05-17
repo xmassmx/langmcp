@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import importlib.metadata
-import sys
+import os
 from pathlib import Path
-from typing import Optional
 
 import typer
 
 from langmcp import __version__
-from langmcp.config import redact_uri
+from langmcp.config import redact_uri, sanitize_error_message
 from langmcp.profiles import ProfileManager
 from langmcp.server import run_server
+from langmcp.tools.health import _probe_checkpointer, _probe_store
 
 app = typer.Typer(
     name="langmcp",
@@ -27,14 +27,14 @@ def _load_profiles(config: Path | None) -> ProfileManager:
 
 @app.command()
 def serve(
-    config: Optional[Path] = typer.Option(
+    config: Path | None = typer.Option(
         None,
         "--config",
         "-c",
         help="Path to langmcp.toml",
         exists=False,
     ),
-    profile: Optional[str] = typer.Option(
+    profile: str | None = typer.Option(
         None,
         "--profile",
         "-p",
@@ -42,12 +42,9 @@ def serve(
     ),
 ) -> None:
     """Start the LangMCP stdio MCP server."""
-    profiles = _load_profiles(config)
     if profile:
-        import os
-
         os.environ["LANGMCP_PROFILE"] = profile
-        profiles = ProfileManager(config_path=config)
+    profiles = _load_profiles(config)
     if not profiles.read_only_enforced:
         typer.echo(
             "Error: LangMCP v0.1 requires read_only=true. "
@@ -70,13 +67,13 @@ def serve(
 
 @app.command()
 def doctor(
-    config: Optional[Path] = typer.Option(
+    config: Path | None = typer.Option(
         None,
         "--config",
         "-c",
         help="Path to langmcp.toml",
     ),
-    profile: Optional[str] = typer.Option(
+    profile: str | None = typer.Option(
         None,
         "--profile",
         "-p",
@@ -84,6 +81,8 @@ def doctor(
     ),
 ) -> None:
     """Check profile connectivity, setup status, and package versions."""
+    if profile:
+        os.environ["LANGMCP_PROFILE"] = profile
     profiles = _load_profiles(config)
     typer.echo(f"langmcp {__version__}")
     if profiles.config_path:
@@ -112,26 +111,46 @@ def doctor(
     from langmcp.adapters.factory import get_adapters
 
     bundle = get_adapters(profiles, name)
+    failed = False
     try:
-        typer.echo("Running checkpointer.setup()...")
-        bundle.checkpointer.setup()
-        typer.echo("  Checkpointer: OK")
-    except Exception as exc:
-        typer.echo(f"  Checkpointer: FAILED — {exc}", err=True)
-    if bundle.store:
-        try:
-            typer.echo("Running store.setup()...")
-            bundle.store.setup()
-            typer.echo("  Store: OK")
-        except Exception as exc:
-            typer.echo(f"  Store: FAILED — {exc}", err=True)
-    else:
-        typer.echo("  Store: skipped (not configured)")
-    bundle.close()
+        typer.echo("Testing checkpointer read access...")
+        cp_ok, cp_setup, cp_warn = _probe_checkpointer(bundle)
+        if cp_ok:
+            typer.echo("  Checkpointer: connected (read OK)")
+            if cp_setup:
+                typer.echo("  Checkpointer setup: OK")
+            elif cp_warn:
+                typer.echo(f"  Checkpointer setup: warning — {cp_warn}", err=True)
+        else:
+            typer.echo(f"  Checkpointer: FAILED — {cp_warn}", err=True)
+            failed = True
+
+        if bundle.store:
+            typer.echo("Testing store read access...")
+            store_ok, store_setup, store_warn = _probe_store(bundle)
+            if store_ok:
+                typer.echo("  Store: connected (read OK)")
+                if store_setup:
+                    typer.echo("  Store setup: OK")
+                elif store_warn:
+                    typer.echo(f"  Store setup: warning — {store_warn}", err=True)
+            else:
+                typer.echo(f"  Store: FAILED — {store_warn}", err=True)
+                failed = True
+        else:
+            typer.echo("  Store: skipped (not configured)")
+    finally:
+        bundle.close()
 
     _print_package_versions()
+    if failed:
+        typer.echo(
+            "\nConnectivity check failed. Verify URIs and network access.",
+            err=True,
+        )
+        raise typer.Exit(1)
     typer.echo(
-        "\nIf setup failed, run LangGraph migrations: "
+        "\nIf setup reported warnings, run LangGraph migrations when you have write access: "
         "https://docs.langchain.com/oss/python/langgraph/add-memory"
     )
 

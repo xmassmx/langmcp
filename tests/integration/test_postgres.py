@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import pytest
 
 from langmcp.profiles import ProfileManager
+from langmcp.tools import checkpoints, store, threads
 from langmcp.tools.context import ToolContext
-from langmcp.tools import checkpoints, health, store, threads
 
 POSTGRES_URI = os.environ.get(
     "POSTGRES_URI",
@@ -69,4 +68,4 @@ def test_postgres_search_store(postgres_profile):
     ctx = ToolContext(postgres_profile)
     result = store.search_store(ctx, "user-test-1", profile="pg", limit=10)
     keys = [i.get("key") for i in result.get("items", [])]
-    assert "theme" in keys or len(result.get("items", [])) >= 0
+    assert "theme" in keys

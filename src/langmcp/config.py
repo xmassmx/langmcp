@@ -12,6 +12,24 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ENV_VAR_PATTERN = re.compile(r"\$\{([^}]+)\}")
+_ENV_FALLBACKS: dict[str, tuple[str, ...]] = {
+    "DATABASE_URL": ("POSTGRES_URI",),
+}
+_URI_IN_MESSAGE = re.compile(
+    r"(postgresql|postgres|redis|rediss|sqlite)(\+\w+)?://[^\s\"')]+",
+    re.IGNORECASE,
+)
+
+
+def _resolve_env_var(key: str) -> str | None:
+    val = os.environ.get(key)
+    if val:
+        return val
+    for alt in _ENV_FALLBACKS.get(key, ()):
+        alt_val = os.environ.get(alt)
+        if alt_val:
+            return alt_val
+    return None
 
 
 def expand_env(value: str) -> str:
@@ -19,9 +37,20 @@ def expand_env(value: str) -> str:
 
     def replacer(match: re.Match[str]) -> str:
         key = match.group(1)
-        return os.environ.get(key, match.group(0))
+        resolved = _resolve_env_var(key)
+        return resolved if resolved is not None else match.group(0)
 
     return _ENV_VAR_PATTERN.sub(replacer, value)
+
+
+def sanitize_error_message(message: str) -> str:
+    """Strip credentials and URIs from exception text before surfacing to users."""
+
+    def _redact_match(match: re.Match[str]) -> str:
+        return redact_uri(match.group(0))
+
+    text = _URI_IN_MESSAGE.sub(_redact_match, str(message))
+    return re.sub(r":([^:@/]+)@", ":***@", text)
 
 
 def redact_uri(uri: str) -> str:

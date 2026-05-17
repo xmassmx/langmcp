@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from langmcp.checkpoint_utils import extract_messages
 from langmcp.analysis.thread import _message_content
+from langmcp.checkpoint_utils import extract_messages
 
 TRIM_MESSAGES_DOC = (
     "https://docs.langchain.com/oss/python/langgraph/add-memory#manage-message-history"

@@ -73,9 +73,7 @@ def search_store(
             ns_val = getattr(item, "namespace", None) or (
                 item.get("namespace") if isinstance(item, dict) else ()
             )
-            key = getattr(item, "key", None) or (
-                item.get("key") if isinstance(item, dict) else ""
-            )
+            key = getattr(item, "key", None) or (item.get("key") if isinstance(item, dict) else "")
             value = getattr(item, "value", None) or (
                 item.get("value") if isinstance(item, dict) else None
             )
@@ -87,8 +85,7 @@ def search_store(
                 {
                     "namespace": list(ns_val) if ns_val else [],
                     "key": key,
-                    "value_preview": value_str[:500]
-                    + ("..." if len(value_str) > 500 else ""),
+                    "value_preview": value_str[:500] + ("..." if len(value_str) > 500 else ""),
                     "updated_at": str(updated) if updated else None,
                 }
             )

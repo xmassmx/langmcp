@@ -68,9 +68,7 @@ def create_mcp(profiles: ProfileManager) -> FastMCP:
         profile: str | None = None,
     ) -> dict:
         """Get full state snapshot for a specific checkpoint."""
-        return checkpoints.get_checkpoint(
-            ctx, thread_id, checkpoint_id, profile=profile
-        )
+        return checkpoints.get_checkpoint(ctx, thread_id, checkpoint_id, profile=profile)
 
     @mcp.tool()
     def compare_checkpoints(
@@ -95,9 +93,7 @@ def create_mcp(profiles: ProfileManager) -> FastMCP:
         page: int = 1,
     ) -> dict:
         """Human-oriented transcript summary for a thread."""
-        return checkpoints.summarize_thread(
-            ctx, thread_id, profile=profile, page=page
-        )
+        return checkpoints.summarize_thread(ctx, thread_id, profile=profile, page=page)
 
     @mcp.tool()
     def analyze_context_window(
@@ -133,9 +129,7 @@ def create_mcp(profiles: ProfileManager) -> FastMCP:
         profile: str | None = None,
     ) -> dict:
         """List store namespaces (PostgreSQL store only in v0.1)."""
-        return store.list_namespaces(
-            ctx, profile=profile, prefix=prefix, max_depth=max_depth
-        )
+        return store.list_namespaces(ctx, profile=profile, prefix=prefix, max_depth=max_depth)
 
     @mcp.tool()
     def search_store(

@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 from langmcp.adapters.postgres import PostgresCheckpointerAdapter, PostgresStoreAdapter
 from langmcp.adapters.redis import RedisCheckpointerAdapter
 from langmcp.adapters.sqlite import SqliteCheckpointerAdapter
-from langmcp.config import ProfileConfig, backend_type_from_uri
 from langmcp.profiles import ProfileManager
 
 

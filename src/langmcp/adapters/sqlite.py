@@ -35,9 +35,7 @@ class SqliteCheckpointerAdapter:
     def get_tuple(self, config: dict[str, Any]) -> Any:
         return self._saver.get_tuple(config)
 
-    def list_checkpoints(
-        self, config: dict[str, Any], *, limit: int | None = None
-    ) -> list[Any]:
+    def list_checkpoints(self, config: dict[str, Any], *, limit: int | None = None) -> list[Any]:
         kwargs: dict[str, Any] = {}
         if limit is not None:
             kwargs["limit"] = limit

@@ -16,6 +16,25 @@ def test_expand_env():
     del os.environ["TEST_LANGMCP_VAR"]
 
 
+def test_expand_env_database_url_fallback(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv(
+        "POSTGRES_URI",
+        "postgresql://langgraph:langgraph@localhost:5442/langgraph",
+    )
+    assert expand_env("${DATABASE_URL}") == "postgresql://langgraph:langgraph@localhost:5442/langgraph"
+    monkeypatch.delenv("POSTGRES_URI", raising=False)
+
+
+def test_sanitize_error_message():
+    from langmcp.config import sanitize_error_message
+
+    msg = "failed: postgresql://user:secret@localhost:5432/db"
+    cleaned = sanitize_error_message(msg)
+    assert "secret" not in cleaned
+    assert "***" in cleaned
+
+
 def test_redact_uri():
     uri = "postgresql://user:secret@localhost:5432/db"
     redacted = redact_uri(uri)
@@ -47,7 +66,6 @@ checkpointer = "sqlite:///./x.db"
 """,
         encoding="utf-8",
     )
-    pm = ProfileManager(config_path=config)
     monkeypatch.setenv("LANGMCP_READ_ONLY", "false")
     pm2 = ProfileManager(config_path=config)
     assert pm2.read_only_enforced is False
