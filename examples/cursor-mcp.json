@@ -2,10 +2,10 @@
   "mcpServers": {
     "langmcp": {
       "command": "uvx",
-      "args": ["langmcp[all]", "serve", "--config", "/absolute/path/to/langmcp.toml"],
+      "args": ["langmcp[all]", "serve", "--config", "<ABSOLUTE_PATH_TO_LANGMCP_TOML>"],
       "env": {
         "LANGMCP_READ_ONLY": "true",
-        "POSTGRES_URI": "postgresql://langgraph:langgraph@localhost:5442/langgraph"
+        "POSTGRES_URI": "postgresql://READONLY_USER:READONLY_PASSWORD@HOST:5432/DB_NAME"
       }
     }
   }

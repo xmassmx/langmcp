@@ -4,8 +4,8 @@ read_only = true
 max_response_chars = 25000
 
 [profiles.dev]
-checkpointer = "postgresql://${POSTGRES_URI}"
-store = "postgresql://${POSTGRES_URI}"
+checkpointer = "${POSTGRES_URI}"
+store = "${POSTGRES_URI}"
 
 [profiles.local_sqlite]
 checkpointer = "sqlite:///./.langgraph/checkpoints.db"

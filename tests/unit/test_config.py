@@ -22,7 +22,9 @@ def test_expand_env_database_url_fallback(monkeypatch):
         "POSTGRES_URI",
         "postgresql://langgraph:langgraph@localhost:5442/langgraph",
     )
-    assert expand_env("${DATABASE_URL}") == "postgresql://langgraph:langgraph@localhost:5442/langgraph"
+    assert (
+        expand_env("${DATABASE_URL}") == "postgresql://langgraph:langgraph@localhost:5442/langgraph"
+    )
     monkeypatch.delenv("POSTGRES_URI", raising=False)
 
 
@@ -51,6 +53,34 @@ def test_profile_manager_loads(sample_config, sqlite_path, monkeypatch):
     assert pm.read_only_enforced is True
     _, cfg = pm.get_profile("test")
     assert str(sqlite_path) in cfg.checkpointer
+
+
+def test_profile_manager_loads_dotenv(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("POSTGRES_URI", raising=False)
+    (tmp_path / ".env").write_text(
+        "POSTGRES_URI=postgresql://readonly:secret@localhost:5432/app\n",
+        encoding="utf-8",
+    )
+    config = tmp_path / "langmcp.toml"
+    config.write_text(
+        """
+[defaults]
+profile = "dev"
+read_only = true
+
+[profiles.dev]
+checkpointer = "${POSTGRES_URI}"
+store = "${POSTGRES_URI}"
+""",
+        encoding="utf-8",
+    )
+
+    pm = ProfileManager(config_path=config)
+    _, cfg = pm.get_profile("dev")
+
+    assert cfg.checkpointer == "postgresql://readonly:secret@localhost:5432/app"
+    assert cfg.store == "postgresql://readonly:secret@localhost:5432/app"
 
 
 def test_read_only_required_false_raises(tmp_path, monkeypatch):

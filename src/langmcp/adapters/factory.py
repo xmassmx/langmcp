@@ -30,7 +30,18 @@ def _scheme(uri: str) -> str:
     return urlparse(uri).scheme.lower().replace("+psycopg", "")
 
 
+def _ensure_resolved_uri(uri: str, *, label: str) -> None:
+    if "${" in uri:
+        raise ValueError(
+            f"Unresolved environment variable in {label} URI. "
+            "Set the referenced variable or update langmcp.toml."
+        )
+    if not _scheme(uri):
+        raise ValueError(f"Missing URI scheme in {label} URI: {uri!r}")
+
+
 def build_checkpointer(uri: str) -> object:
+    _ensure_resolved_uri(uri, label="checkpointer")
     scheme = _scheme(uri)
     if scheme in ("postgresql", "postgres"):
         return PostgresCheckpointerAdapter(uri)
@@ -42,6 +53,7 @@ def build_checkpointer(uri: str) -> object:
 
 
 def build_store(uri: str) -> object:
+    _ensure_resolved_uri(uri, label="store")
     scheme = _scheme(uri)
     if scheme in ("postgresql", "postgres"):
         return PostgresStoreAdapter(uri)

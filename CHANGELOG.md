@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- MCP resources for profiles, profile health, threads, checkpoints, store items, and user memory summaries
+- MCP prompts for thread debugging, memory-gap investigation, checkpoint comparison, and user-memory inspection
+- Launch docs: `.env.example`, `.python-version`, `CONTRIBUTING.md`, and a public-ready README
+
 ### Fixed
+
+- CLI: add `--version` / `-V` (publish smoke test and standard UX)
+- Health/doctor: skip `setup()` when `read_only=true` so probes do not mutate schemas
+- CHANGELOG release link aligned with `pyproject.toml` repository URL
+- README/CONTRIBUTING integration examples point to `docker-compose.test.yml` credentials
+- README quick smoke command uses `--version` before config is required
+- `.gitignore`: ignore `ARTICLE.md`; allow `.env.example`
 
 - Publish workflow: `langmcp doctor` smoke test fails on connectivity errors (no `|| true`)
 - Health check and `doctor`: connectivity via read-only probes; `setup()` failures are warnings when reads succeed
@@ -38,4 +51,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `read_only=true` enforced in v0.1
 - No raw DSN parameters on MCP tools
 
-[0.1.0]: https://github.com/langmcp/langmcp/releases/tag/v0.1.0
+[0.1.0]: https://github.com/xmassmx/langmcp/releases/tag/v0.1.0

@@ -21,6 +21,26 @@ app = typer.Typer(
 )
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"langmcp {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def _root(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        help="Show the installed LangMCP version and exit.",
+        callback=_version_callback,
+        is_eager=True,
+    ),
+) -> None:
+    """LangMCP CLI."""
+
+
 def _load_profiles(config: Path | None) -> ProfileManager:
     return ProfileManager(config_path=config)
 
@@ -88,7 +108,7 @@ def doctor(
     if profiles.config_path:
         typer.echo(f"Config: {profiles.config_path}")
     else:
-        typer.echo("Config: (not found — using env overrides only)")
+        typer.echo("Config: (not found - using env overrides only)")
     if not profiles.list_profiles():
         typer.echo("No profiles configured. Copy examples/langmcp.example.toml to langmcp.toml")
         _print_package_versions()
@@ -107,35 +127,51 @@ def doctor(
     else:
         typer.echo("  Store: (not configured)")
     typer.echo(f"  Read-only: {profiles.read_only_enforced}")
+    if not profiles.read_only_enforced:
+        typer.echo(
+            "Error: LangMCP v0.1 doctor requires read_only=true. "
+            "Set LANGMCP_READ_ONLY=true or [defaults] read_only = true.",
+            err=True,
+        )
+        raise typer.Exit(1)
 
     from langmcp.adapters.factory import get_adapters
 
-    bundle = get_adapters(profiles, name)
+    try:
+        bundle = get_adapters(profiles, name)
+    except ValueError as exc:
+        typer.echo(f"Config error: {sanitize_error_message(exc)}", err=True)
+        raise typer.Exit(1) from exc
     failed = False
     try:
+        read_only = profiles.read_only_enforced
         typer.echo("Testing checkpointer read access...")
-        cp_ok, cp_setup, cp_warn = _probe_checkpointer(bundle)
+        cp_ok, cp_setup, cp_warn = _probe_checkpointer(bundle, read_only=read_only)
         if cp_ok:
             typer.echo("  Checkpointer: connected (read OK)")
-            if cp_setup:
+            if read_only:
+                typer.echo("  Checkpointer setup: skipped (read-only mode)")
+            elif cp_setup:
                 typer.echo("  Checkpointer setup: OK")
             elif cp_warn:
-                typer.echo(f"  Checkpointer setup: warning — {cp_warn}", err=True)
+                typer.echo(f"  Checkpointer setup: warning - {cp_warn}", err=True)
         else:
-            typer.echo(f"  Checkpointer: FAILED — {cp_warn}", err=True)
+            typer.echo(f"  Checkpointer: FAILED - {cp_warn}", err=True)
             failed = True
 
         if bundle.store:
             typer.echo("Testing store read access...")
-            store_ok, store_setup, store_warn = _probe_store(bundle)
+            store_ok, store_setup, store_warn = _probe_store(bundle, read_only=read_only)
             if store_ok:
                 typer.echo("  Store: connected (read OK)")
-                if store_setup:
+                if read_only:
+                    typer.echo("  Store setup: skipped (read-only mode)")
+                elif store_setup:
                     typer.echo("  Store setup: OK")
                 elif store_warn:
-                    typer.echo(f"  Store setup: warning — {store_warn}", err=True)
+                    typer.echo(f"  Store setup: warning - {store_warn}", err=True)
             else:
-                typer.echo(f"  Store: FAILED — {store_warn}", err=True)
+                typer.echo(f"  Store: FAILED - {store_warn}", err=True)
                 failed = True
         else:
             typer.echo("  Store: skipped (not configured)")

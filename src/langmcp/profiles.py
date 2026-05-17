@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from langmcp.config import (
     DefaultsConfig,
     LangMcpSettings,
@@ -19,12 +21,24 @@ from langmcp.config import (
 
 class ProfileManager:
     def __init__(self, config_path: Path | None = None) -> None:
+        self._load_cwd_env()
         self._settings = LangMcpSettings()
         self._config_path = config_path or self._resolve_config_path()
+        self._load_config_env(self._config_path)
+        self._settings = LangMcpSettings()
         self._defaults = DefaultsConfig()
         self._profiles: dict[str, ProfileConfig] = {}
         if self._config_path and self._config_path.is_file():
             self._load_file(self._config_path)
+
+    @staticmethod
+    def _load_cwd_env() -> None:
+        load_dotenv(Path.cwd() / ".env", override=False)
+
+    @staticmethod
+    def _load_config_env(config_path: Path | None) -> None:
+        if config_path:
+            load_dotenv(config_path.parent / ".env", override=False)
 
     @staticmethod
     def _resolve_config_path() -> Path | None:

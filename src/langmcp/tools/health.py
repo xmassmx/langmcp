@@ -10,12 +10,15 @@ from langmcp.tools.context import ToolContext
 _HEALTH_CONFIG = {"configurable": {"thread_id": "__langmcp_health__"}}
 
 
-def _probe_checkpointer(bundle) -> tuple[bool, bool, str | None]:
+def _probe_checkpointer(bundle, *, read_only: bool) -> tuple[bool, bool, str | None]:
     """Test read access first, then optional setup(). Returns (connected, setup_ok, warning)."""
     try:
         bundle.checkpointer.get_tuple(_HEALTH_CONFIG)
     except Exception as exc:
         return False, False, f"Checkpointer: {sanitize_error_message(exc)}"
+
+    if read_only:
+        return True, False, None
 
     cp_setup = False
     warning = None
@@ -30,7 +33,7 @@ def _probe_checkpointer(bundle) -> tuple[bool, bool, str | None]:
     return True, cp_setup, warning
 
 
-def _probe_store(bundle) -> tuple[bool | None, bool | None, str | None]:
+def _probe_store(bundle, *, read_only: bool) -> tuple[bool | None, bool | None, str | None]:
     """Test store read access first, then optional setup()."""
     if not bundle.store:
         return None, None, None
@@ -39,6 +42,9 @@ def _probe_store(bundle) -> tuple[bool | None, bool | None, str | None]:
         bundle.store.list_namespaces(max_depth=0)
     except Exception as exc:
         return False, False, f"Store: {sanitize_error_message(exc)}"
+
+    if read_only:
+        return True, False, None
 
     store_setup = False
     warning = None
@@ -58,11 +64,12 @@ def health_check(ctx: ToolContext, profile: str | None = None) -> dict:
     profile_name = info["profile"]
     bundle = ctx.bundle(profile_name)
     warnings: list[str] = []
+    read_only = info["read_only"]
     try:
-        cp_ok, cp_setup, cp_warn = _probe_checkpointer(bundle)
+        cp_ok, cp_setup, cp_warn = _probe_checkpointer(bundle, read_only=read_only)
         if cp_warn:
             warnings.append(cp_warn)
-        store_ok, store_setup, store_warn = _probe_store(bundle)
+        store_ok, store_setup, store_warn = _probe_store(bundle, read_only=read_only)
         if store_warn:
             warnings.append(store_warn)
     finally:

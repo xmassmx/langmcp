@@ -29,15 +29,13 @@ store = "sqlite:///./mock.db"
     return ProfileManager(config_path=config)
 
 
-def test_health_check_connected_when_setup_fails(health_profile, monkeypatch):
-    """Read access succeeds; setup failure is a warning, not a connectivity failure."""
+def test_health_check_read_only_skips_setup(health_profile, monkeypatch):
+    """v0.1 read-only mode probes reads only; setup() must not run."""
     mock_cp = MagicMock()
     mock_cp.get_tuple.return_value = None
-    mock_cp.setup.side_effect = PermissionError("permission denied for schema public")
 
     mock_store = MagicMock()
     mock_store.list_namespaces.return_value = []
-    mock_store.setup.side_effect = PermissionError("permission denied for schema public")
 
     mock_bundle = MagicMock()
     mock_bundle.checkpointer = mock_cp
@@ -52,10 +50,29 @@ def test_health_check_connected_when_setup_fails(health_profile, monkeypatch):
     assert result["checkpointer_setup"] is False
     assert result["store_connected"] is True
     assert result["store_setup"] is False
-    assert result["warning"] is not None
-    assert "read access OK" in result["warning"]
-    assert "permission denied" in result["warning"]
+    assert result["warning"] is None
+    mock_cp.setup.assert_not_called()
+    mock_store.setup.assert_not_called()
     mock_bundle.close.assert_called_once()
+
+
+def test_probe_setup_warning_when_not_read_only():
+    """When read_only is false, setup failure is a warning, not a connectivity failure."""
+    mock_cp = MagicMock()
+    mock_cp.get_tuple.return_value = None
+    mock_cp.setup.side_effect = PermissionError("permission denied for schema public")
+
+    mock_bundle = MagicMock()
+    mock_bundle.checkpointer = mock_cp
+    mock_bundle.store = None
+
+    ok, setup_ok, warn = health._probe_checkpointer(mock_bundle, read_only=False)
+
+    assert ok is True
+    assert setup_ok is False
+    assert warn is not None
+    assert "read access OK" in warn
+    assert "permission denied" in warn
 
 
 def test_health_check_fails_when_read_fails(health_profile, monkeypatch):

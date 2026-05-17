@@ -2,6 +2,7 @@
 langmcp.toml
 .env
 .env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -20,6 +21,8 @@ venv/
 # Test / tooling
 .pytest_cache/
 .ruff_cache/
+.uv-cache/
+pytest-of-*/
 .coverage
 htmlcov/
 *.db
@@ -34,3 +37,5 @@ htmlcov/
 .DS_Store
 Thumbs.db
 notes.md
+ARTICLE.md
+LAUNCH_CHECKLIST.md

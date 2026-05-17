@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 
 
 def build_graph(checkpointer, store=None):
@@ -26,7 +27,7 @@ def build_graph(checkpointer, store=None):
     return builder.compile(checkpointer=checkpointer, store=store)
 
 
-def seed(backend: str) -> None:
+def seed(backend: str) -> dict[str, str]:
     thread_id = "test-1"
     user_id = "user-test-1"
     config = {
@@ -84,11 +85,17 @@ def seed(backend: str) -> None:
     else:
         raise ValueError(backend)
 
-    print(f"Seeded backend={backend} thread_id={thread_id} user_id={user_id}")
+    return {"backend": backend, "thread_id": thread_id, "user_id": user_id}
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--backend", choices=["postgres", "sqlite", "redis"], required=True)
     args = parser.parse_args()
-    seed(args.backend)
+    result = seed(args.backend)
+    sys.stdout.write(
+        "Seeded "
+        f"backend={result['backend']} "
+        f"thread_id={result['thread_id']} "
+        f"user_id={result['user_id']}\n"
+    )
