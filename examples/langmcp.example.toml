@@ -1,0 +1,14 @@
+[defaults]
+profile = "dev"
+read_only = true
+max_response_chars = 25000
+
+[profiles.dev]
+checkpointer = "postgresql://langgraph_ro:${POSTGRES_PASSWORD}@localhost:5442/langgraph?sslmode=disable"
+store = "postgresql://langgraph_ro:${POSTGRES_PASSWORD}@localhost:5442/langgraph?sslmode=disable"
+
+[profiles.local_sqlite]
+checkpointer = "sqlite:///./.langgraph/checkpoints.db"
+
+[profiles.local_redis]
+checkpointer = "redis://localhost:6379/0"

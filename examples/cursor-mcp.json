@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "langmcp": {
+      "command": "uvx",
+      "args": ["langmcp[all]", "serve", "--config", "/absolute/path/to/langmcp.toml"],
+      "env": {
+        "POSTGRES_URI": "postgresql://langgraph:langgraph@localhost:5442/langgraph"
+      }
+    }
+  }
+}

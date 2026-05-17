@@ -1,0 +1,57 @@
+"""Unit tests for configuration and profiles."""
+
+from __future__ import annotations
+
+import os
+
+import pytest
+
+from langmcp.config import expand_env, redact_uri
+from langmcp.profiles import ProfileManager
+
+
+def test_expand_env():
+    os.environ["TEST_LANGMCP_VAR"] = "hello"
+    assert expand_env("prefix-${TEST_LANGMCP_VAR}-suffix") == "prefix-hello-suffix"
+    del os.environ["TEST_LANGMCP_VAR"]
+
+
+def test_redact_uri():
+    uri = "postgresql://user:secret@localhost:5432/db"
+    redacted = redact_uri(uri)
+    assert "secret" not in redacted
+    assert "***" in redacted
+    assert "user" in redacted
+
+
+def test_profile_manager_loads(sample_config, sqlite_path, monkeypatch):
+    monkeypatch.setenv("SQLITE_PATH", str(sqlite_path))
+    pm = ProfileManager(config_path=sample_config)
+    names = [p["name"] for p in pm.list_profiles()]
+    assert "test" in names
+    assert pm.read_only_enforced is True
+    _, cfg = pm.get_profile("test")
+    assert str(sqlite_path) in cfg.checkpointer
+
+
+def test_read_only_required_false_raises(tmp_path, monkeypatch):
+    config = tmp_path / "langmcp.toml"
+    config.write_text(
+        """
+[defaults]
+read_only = false
+profile = "x"
+
+[profiles.x]
+checkpointer = "sqlite:///./x.db"
+""",
+        encoding="utf-8",
+    )
+    pm = ProfileManager(config_path=config)
+    monkeypatch.setenv("LANGMCP_READ_ONLY", "false")
+    pm2 = ProfileManager(config_path=config)
+    assert pm2.read_only_enforced is False
+    from langmcp.tools.context import ToolContext
+
+    with pytest.raises(RuntimeError, match="read_only"):
+        ToolContext(pm2)

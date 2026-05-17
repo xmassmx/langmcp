@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv pip install -e ".[all,dev]" --system
+      - run: ruff check src tests
+      - run: ruff format --check src tests
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: langgraph
+          POSTGRES_PASSWORD: langgraph
+          POSTGRES_DB: langgraph
+        ports:
+          - 5442:5432
+        options: >-
+          --health-cmd "pg_isready -U langgraph -d langgraph"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 10
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install ${{ matrix.python-version }}
+      - run: uv pip install -e ".[all,dev]" --system
+      - run: pytest tests/unit -v
+      - name: Integration tests
+        env:
+          POSTGRES_URI: postgresql://langgraph:langgraph@localhost:5442/langgraph
+          REDIS_URI: redis://localhost:6379/0
+        run: pytest tests/integration -v -m integration
