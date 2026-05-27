@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-05-27
+
 ### Added
 
 - MCP resources for profiles, profile health, threads, checkpoints, store items, and user memory summaries
@@ -30,10 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redis thread discovery: SCAN deadline; document `checkpoint:` key prefix
 - CLI: remove unused import; avoid double profile config load on `serve --profile`
 - Examples and `pyproject.toml` URLs aligned with README and repository
-
-## [0.1.0] - 2026-05-17
-
-### Added
 
 - Initial release: read-only MCP server for LangGraph persistence inspection
 - stdio transport via FastMCP (`mcp` 1.x)

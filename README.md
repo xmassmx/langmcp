@@ -82,7 +82,7 @@ Example `langmcp.toml`:
 [defaults]
 profile = "dev"
 read_only = true
-max_response_chars = 25000
+max_response_chars = 250000
 
 [profiles.dev]
 checkpointer = "${POSTGRES_URI}"
