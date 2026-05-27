@@ -65,7 +65,6 @@ class PostgresStoreAdapter:
         offset: int = 0,
     ) -> list[Any]:
         kwargs: dict[str, Any] = {
-            "namespace_prefix": namespace_prefix,
             "limit": limit,
             "offset": offset,
         }
@@ -73,7 +72,7 @@ class PostgresStoreAdapter:
             kwargs["query"] = query
         if filter is not None:
             kwargs["filter"] = filter
-        return list(self._store.search(**kwargs))
+        return list(self._store.search(namespace_prefix, **kwargs))
 
     def get(self, namespace: tuple[str, ...], key: str) -> Any:
         return self._store.get(namespace, key)

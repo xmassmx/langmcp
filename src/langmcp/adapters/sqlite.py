@@ -13,8 +13,10 @@ def sqlite_path_from_uri(uri: str) -> str:
         path = parsed.path
         if path.startswith("/") and len(path) > 2 and path[2] == ":":
             return path[1:]
-        if path.startswith("/"):
-            return path.lstrip("/")
+        if path.startswith("//"):
+            return path[1:]
+        if path.startswith(("/./", "/../")):
+            return path[1:]
         return path or parsed.netloc
     return uri
 

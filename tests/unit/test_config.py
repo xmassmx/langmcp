@@ -6,6 +6,7 @@ import os
 
 import pytest
 
+from langmcp.adapters.sqlite import sqlite_path_from_uri
 from langmcp.config import expand_env, redact_uri
 from langmcp.profiles import ProfileManager
 
@@ -43,6 +44,15 @@ def test_redact_uri():
     assert "secret" not in redacted
     assert "***" in redacted
     assert "user" in redacted
+
+
+def test_sqlite_uri_path_conversion():
+    assert sqlite_path_from_uri("sqlite:////tmp/langmcp/cp.db") == "/tmp/langmcp/cp.db"
+    assert (
+        sqlite_path_from_uri("sqlite:///./.langgraph/checkpoints.db")
+        == "./.langgraph/checkpoints.db"
+    )
+    assert sqlite_path_from_uri("sqlite:///C:/Users/me/cp.db") == "C:/Users/me/cp.db"
 
 
 def test_profile_manager_loads(sample_config, sqlite_path, monkeypatch):
