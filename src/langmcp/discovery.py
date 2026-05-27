@@ -7,6 +7,8 @@ import time
 from typing import Any
 from urllib.parse import urlparse
 
+from langmcp.adapters.sqlite import sqlite_path_from_uri
+
 # LangGraph RedisSaver persists checkpoints under keys like checkpoint:{thread_id}:...
 _REDIS_CHECKPOINT_KEY_PREFIX = "checkpoint:"
 
@@ -55,16 +57,7 @@ def list_threads_postgres(uri: str, *, limit: int = 50, offset: int = 0) -> list
 
 
 def list_threads_sqlite(uri: str, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
-    parsed = urlparse(uri)
-    path = parsed.path
-    if path.startswith("/") and len(path) > 2 and path[2] == ":":
-        db_path = path[1:]
-    elif path.startswith("/"):
-        db_path = path.lstrip("/")
-    else:
-        db_path = path.replace("/", "", 1) if path.startswith("///") else path
-    if not db_path:
-        db_path = parsed.netloc
+    db_path = sqlite_path_from_uri(uri)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
