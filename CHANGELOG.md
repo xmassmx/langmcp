@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-27
+
+### Fixed
+
+- README/Cursor example: replace angle-bracket config path placeholder so PyPI renders JSON correctly
+- Project metadata: point PyPI homepage and documentation links to the public GitHub README
+- README: add package, CI, publish, and license badges
+
 ## [0.1.0] - 2026-05-27
 
 ### Added
@@ -49,4 +57,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `read_only=true` enforced in v0.1
 - No raw DSN parameters on MCP tools
 
+[0.1.1]: https://github.com/xmassmx/langmcp/releases/tag/v0.1.1
 [0.1.0]: https://github.com/xmassmx/langmcp/releases/tag/v0.1.0
