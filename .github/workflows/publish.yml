@@ -24,7 +24,7 @@ jobs:
           uv pip install dist/*.whl
           uv run langmcp --version
           uv run langmcp doctor
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
