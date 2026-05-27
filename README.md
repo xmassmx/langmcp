@@ -1,5 +1,11 @@
 # LangMCP
 
+[![PyPI version](https://img.shields.io/pypi/v/langmcp.svg)](https://pypi.org/project/langmcp/)
+[![Python versions](https://img.shields.io/pypi/pyversions/langmcp.svg)](https://pypi.org/project/langmcp/)
+[![CI](https://github.com/xmassmx/langmcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xmassmx/langmcp/actions/workflows/ci.yml)
+[![Publish](https://github.com/xmassmx/langmcp/actions/workflows/publish.yml/badge.svg)](https://github.com/xmassmx/langmcp/actions/workflows/publish.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Read-only MCP server for inspecting LangGraph checkpoints, thread state, and long-term memory.**
 
 LangMCP helps you answer the debugging question that traces do not always answer:
@@ -126,7 +132,7 @@ Minimal shape:
   "mcpServers": {
     "langmcp": {
       "command": "uvx",
-      "args": ["langmcp[all]", "serve", "--config", "<ABSOLUTE_PATH_TO_LANGMCP_TOML>"],
+      "args": ["langmcp[all]", "serve", "--config", "ABSOLUTE_PATH_TO_LANGMCP_TOML"],
       "env": {
         "LANGMCP_READ_ONLY": "true",
         "POSTGRES_URI": "postgresql://READONLY_USER:READONLY_PASSWORD@HOST:5432/DB_NAME"

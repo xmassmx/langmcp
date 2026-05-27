@@ -53,7 +53,8 @@ dev = [
 langmcp = "langmcp.cli:app"
 
 [project.urls]
-Documentation = "https://docs.langchain.com/oss/python/langgraph/persistence"
+Homepage = "https://github.com/xmassmx/langmcp"
+Documentation = "https://github.com/xmassmx/langmcp#readme"
 Repository = "https://github.com/xmassmx/langmcp"
 
 [tool.hatch.build.targets.wheel]
