@@ -8,6 +8,13 @@ from typing import Any
 from urllib.parse import urlparse
 
 from langmcp.adapters.sqlite import sqlite_path_from_uri
+from langmcp.config import backend_type_from_uri, sanitize_error_message
+from langmcp.connectivity import (
+    backend_unreachable_error,
+    connect_timeout_seconds,
+    is_backend_connection_error,
+    with_connect_timeout,
+)
 
 # LangGraph RedisSaver persists checkpoints under keys like checkpoint:{thread_id}:...
 _REDIS_CHECKPOINT_KEY_PREFIX = "checkpoint:"
@@ -42,11 +49,21 @@ def list_threads_postgres(uri: str, *, limit: int = 50, offset: int = 0) -> list
     import psycopg
     from psycopg.rows import dict_row
 
-    conn_str = _postgres_conn_string(uri)
-    with psycopg.connect(conn_str, row_factory=dict_row) as conn:
-        with conn.cursor() as cur:
-            cur.execute(_POSTGRES_THREADS_SQL, (limit, offset))
-            rows = cur.fetchall()
+    conn_str = with_connect_timeout(_postgres_conn_string(uri))
+    timeout = connect_timeout_seconds()
+    try:
+        with psycopg.connect(
+            conn_str,
+            row_factory=dict_row,
+            connect_timeout=timeout,
+        ) as conn:
+            with conn.cursor() as cur:
+                cur.execute(_POSTGRES_THREADS_SQL, (limit, offset))
+                rows = cur.fetchall()
+    except Exception as exc:
+        if is_backend_connection_error(exc):
+            raise ConnectionError(sanitize_error_message(exc)) from exc
+        raise
     return [
         {
             "thread_id": row["thread_id"],
@@ -58,7 +75,12 @@ def list_threads_postgres(uri: str, *, limit: int = 50, offset: int = 0) -> list
 
 def list_threads_sqlite(uri: str, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
     db_path = sqlite_path_from_uri(uri)
-    conn = sqlite3.connect(db_path)
+    try:
+        conn = sqlite3.connect(db_path)
+    except sqlite3.Error as exc:
+        if is_backend_connection_error(exc):
+            raise ConnectionError(sanitize_error_message(exc)) from exc
+        raise
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.execute(_SQLITE_THREADS_SQL, (limit, offset))
@@ -80,7 +102,17 @@ def list_threads_redis(
     """Discover threads via Redis key scan. Returns (threads, warning)."""
     import redis
 
-    client = redis.from_url(uri)
+    timeout = connect_timeout_seconds()
+    try:
+        client = redis.from_url(
+            uri,
+            socket_connect_timeout=timeout,
+            socket_timeout=timeout,
+        )
+    except Exception as exc:
+        if is_backend_connection_error(exc):
+            raise ConnectionError(sanitize_error_message(exc)) from exc
+        raise
     warning: str | None = None
     prefix = _REDIS_CHECKPOINT_KEY_PREFIX
     thread_ids: set[str] = set()
@@ -120,6 +152,11 @@ def list_threads_for_uri(
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[dict[str, Any]], str | None]:
+    if "${" in uri:
+        raise ValueError(
+            "Unresolved environment variable in checkpointer URI. "
+            "Set the referenced variable or update langmcp.toml."
+        )
     scheme = urlparse(uri).scheme.lower().replace("+psycopg", "")
     if scheme in ("postgresql", "postgres"):
         return list_threads_postgres(uri, limit=limit, offset=offset), None
@@ -128,3 +165,39 @@ def list_threads_for_uri(
     if scheme in ("redis", "rediss"):
         return list_threads_redis(uri, limit=limit, offset=offset)
     raise ValueError(f"Thread discovery not supported for scheme: {scheme}")
+
+
+def list_threads_for_profile(
+    profile_name: str,
+    checkpointer_uri: str,
+    *,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """List threads or return a structured backend_unreachable error dict."""
+    backend = backend_type_from_uri(checkpointer_uri)
+    try:
+        threads, warning = list_threads_for_uri(
+            checkpointer_uri,
+            limit=limit,
+            offset=offset,
+        )
+    except Exception as exc:
+        if is_backend_connection_error(exc) or isinstance(exc, (ValueError, OSError)):
+            if isinstance(exc, ValueError) and "Unresolved" in str(exc):
+                return {
+                    "error": "config_error",
+                    "message": str(exc),
+                    "profile": profile_name,
+                }
+            return backend_unreachable_error(
+                profile_name,
+                exc,
+                backend=backend,
+                role="checkpointer",
+            )
+        raise
+    data: dict[str, Any] = {"threads": threads, "limit": limit, "offset": offset}
+    if warning:
+        data["warning"] = warning
+    return data

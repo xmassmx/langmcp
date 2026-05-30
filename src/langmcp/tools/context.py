@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from langmcp.adapters.factory import AdapterBundle, get_adapters, store_required_error
+from langmcp.adapters.factory import (
+    AdapterBundle,
+    BackendConnectionError,
+    get_adapters,
+    store_required_error,
+)
 from langmcp.pagination import wrap_response
 from langmcp.profiles import ProfileManager
 
@@ -17,7 +22,25 @@ class ToolContext:
             )
 
     def bundle(self, profile: str | None = None) -> AdapterBundle:
-        return get_adapters(self.profiles, profile)
+        bundle, err = self.open_bundle(profile)
+        if err is not None:
+            raise BackendConnectionError(err)
+        return bundle
+
+    def open_bundle(self, profile: str | None = None) -> tuple[AdapterBundle | None, dict | None]:
+        """Return (bundle, error_response). error_response is ready for ctx.finish()."""
+        try:
+            return get_adapters(self.profiles, profile), None
+        except BackendConnectionError as exc:
+            return None, exc.payload
+
+    def finish_connection_error(
+        self,
+        err: dict,
+        *,
+        profile: str | None = None,
+    ) -> dict:
+        return self.finish(err, profile=err.get("profile", self.profiles.active_profile_name(profile)))
 
     def max_chars(self) -> int:
         return self.profiles.max_response_chars()
