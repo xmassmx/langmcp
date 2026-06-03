@@ -2,7 +2,8 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/langmcp.svg)](https://pypi.org/project/langmcp/)
 [![Python versions](https://img.shields.io/pypi/pyversions/langmcp.svg)](https://pypi.org/project/langmcp/)
-[![CI](https://github.com/xmassmx/langmcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xmassmx/langmcp/actions/workflows/ci.yml)
+[![CI](https://github.com/xmassmx/langmcp/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/xmassmx/langmcp/actions/workflows/ci.yml?query=branch%3Adevelop)
+[![CI main](https://github.com/xmassmx/langmcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xmassmx/langmcp/actions/workflows/ci.yml?query=branch%3Amain)
 [![Publish](https://github.com/xmassmx/langmcp/actions/workflows/publish.yml/badge.svg)](https://github.com/xmassmx/langmcp/actions/workflows/publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
