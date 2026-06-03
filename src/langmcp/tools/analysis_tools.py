@@ -15,7 +15,9 @@ def analyze_context_window_tool(
     profile: str | None = None,
     model_hint: str | None = None,
 ) -> dict:
-    bundle = ctx.bundle(profile)
+    bundle, conn_err = ctx.open_bundle(profile)
+    if conn_err is not None:
+        return ctx.finish_connection_error(conn_err, profile=profile)
     try:
         tup = bundle.checkpointer.get_tuple(thread_config(thread_id))
         snap = checkpoint_tuple_to_snapshot(tup)
@@ -37,7 +39,9 @@ def analyze_memory_gaps_tool(
     profile: str | None = None,
     expected_namespace: str | None = None,
 ) -> dict:
-    bundle = ctx.bundle(profile)
+    bundle, conn_err = ctx.open_bundle(profile)
+    if conn_err is not None:
+        return ctx.finish_connection_error(conn_err, profile=profile)
     err = ctx.require_store(bundle)
     if err:
         bundle.close()

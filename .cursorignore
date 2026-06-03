@@ -1,0 +1,50 @@
+﻿# Cursor indexing exclusions for langmcp
+# Syntax matches .gitignore. Keeps secrets, caches, and noise out of @codebase / search.
+
+# --- Secrets & local config (never index) ---
+.env
+.env.*
+!.env.example
+langmcp.toml
+
+# --- Lockfiles & build artifacts (large, low signal) ---
+uv.lock
+dist/
+dist_test/
+build/
+*.egg-info/
+.eggs/
+
+# --- Python virtualenvs & bytecode ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Tooling caches & coverage ---
+.pytest_cache/
+.ruff_cache/
+.uv-cache/
+pytest-of-*/
+.coverage
+htmlcov/
+
+# --- LangGraph / persistence runtime data ---
+.langgraph/
+*.db
+*.sqlite
+
+# --- IDE & editor ---
+.idea/
+.vscode/
+*.swp
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Personal / draft docs (not part of the package) ---
+notes.md
+ARTICLE.md
+LAUNCH_CHECKLIST.md

@@ -8,6 +8,12 @@ from urllib.parse import urlparse
 from langmcp.adapters.postgres import PostgresCheckpointerAdapter, PostgresStoreAdapter
 from langmcp.adapters.redis import RedisCheckpointerAdapter
 from langmcp.adapters.sqlite import SqliteCheckpointerAdapter
+from langmcp.config import backend_type_from_uri
+from langmcp.connectivity import (
+    backend_unreachable_error,
+    is_backend_connection_error,
+    with_connect_timeout,
+)
 from langmcp.profiles import ProfileManager
 
 
@@ -44,7 +50,7 @@ def build_checkpointer(uri: str) -> object:
     _ensure_resolved_uri(uri, label="checkpointer")
     scheme = _scheme(uri)
     if scheme in ("postgresql", "postgres"):
-        return PostgresCheckpointerAdapter(uri)
+        return PostgresCheckpointerAdapter(with_connect_timeout(uri))
     if scheme == "sqlite":
         return SqliteCheckpointerAdapter(uri)
     if scheme in ("redis", "rediss"):
@@ -56,7 +62,7 @@ def build_store(uri: str) -> object:
     _ensure_resolved_uri(uri, label="store")
     scheme = _scheme(uri)
     if scheme in ("postgresql", "postgres"):
-        return PostgresStoreAdapter(uri)
+        return PostgresStoreAdapter(with_connect_timeout(uri))
     raise ValueError(
         f"Store not supported for scheme '{scheme}' in v0.1. "
         "Use PostgreSQL for long-term memory store."
@@ -68,8 +74,34 @@ def get_adapters(
     profile_name: str | None = None,
 ) -> AdapterBundle:
     name, cfg = profiles.get_profile(profile_name)
-    cp = build_checkpointer(cfg.checkpointer)
-    store = build_store(cfg.store) if cfg.store else None
+    try:
+        cp = build_checkpointer(cfg.checkpointer)
+    except Exception as exc:
+        if is_backend_connection_error(exc):
+            err = backend_unreachable_error(
+                name,
+                exc,
+                backend=backend_type_from_uri(cfg.checkpointer),
+                role="checkpointer",
+            )
+            raise BackendConnectionError(err) from exc
+        raise
+    store = None
+    if cfg.store:
+        try:
+            store = build_store(cfg.store)
+        except Exception as exc:
+            if hasattr(cp, "close"):
+                cp.close()
+            if is_backend_connection_error(exc):
+                err = backend_unreachable_error(
+                    name,
+                    exc,
+                    backend=backend_type_from_uri(cfg.store),
+                    role="store",
+                )
+                raise BackendConnectionError(err) from exc
+            raise
     return AdapterBundle(
         profile_name=name,
         checkpointer=cp,
@@ -77,6 +109,14 @@ def get_adapters(
         checkpointer_uri=cfg.checkpointer,
         store_uri=cfg.store,
     )
+
+
+class BackendConnectionError(Exception):
+    """Raised when adapter initialization cannot reach the configured backend."""
+
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
+        super().__init__(payload.get("message", "backend unreachable"))
 
 
 def store_available(bundle: AdapterBundle) -> bool:

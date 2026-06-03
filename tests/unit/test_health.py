@@ -42,7 +42,7 @@ def test_health_check_read_only_skips_setup(health_profile, monkeypatch):
     mock_bundle.store = mock_store
 
     ctx = ToolContext(health_profile)
-    monkeypatch.setattr(ctx, "bundle", lambda _name: mock_bundle)
+    monkeypatch.setattr(ctx, "open_bundle", lambda _name: (mock_bundle, None))
 
     result = health.health_check(ctx, profile="mock")
 
@@ -75,6 +75,30 @@ def test_probe_setup_warning_when_not_read_only():
     assert "permission denied" in warn
 
 
+def test_health_check_unreachable_backend(health_profile, monkeypatch):
+    ctx = ToolContext(health_profile)
+    monkeypatch.setattr(
+        ctx,
+        "open_bundle",
+        lambda _name: (
+            None,
+            {
+                "error": "backend_unreachable",
+                "message": "Could not connect to checkpointer (postgresql): timeout",
+                "profile": "mock",
+                "backend": "postgresql",
+                "role": "checkpointer",
+            },
+        ),
+    )
+
+    result = health.health_check(ctx, profile="mock")
+
+    assert result["checkpointer_connected"] is False
+    assert result["error"] == "backend_unreachable"
+    assert "timeout" in (result.get("warning") or "")
+
+
 def test_health_check_fails_when_read_fails(health_profile, monkeypatch):
     mock_cp = MagicMock()
     mock_cp.get_tuple.side_effect = ConnectionError(
@@ -85,7 +109,7 @@ def test_health_check_fails_when_read_fails(health_profile, monkeypatch):
     mock_bundle.store = None
 
     ctx = ToolContext(health_profile)
-    monkeypatch.setattr(ctx, "bundle", lambda _name: mock_bundle)
+    monkeypatch.setattr(ctx, "open_bundle", lambda _name: (mock_bundle, None))
 
     result = health.health_check(ctx, profile="mock")
 

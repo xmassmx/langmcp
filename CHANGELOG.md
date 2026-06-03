@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Backend connectivity helpers that apply PostgreSQL connection timeouts and classify unreachable persistence backends.
+- Unit coverage for backend timeout handling and unreachable-backend health responses.
+
+### Fixed
+
+- Tool calls now return structured `backend_unreachable` errors instead of hanging on unavailable checkpoint or store backends.
+- Connection failure messages redact sensitive backend details before returning them to MCP clients.
+
 ## [0.1.1] - 2026-05-27
 
 ### Fixed
