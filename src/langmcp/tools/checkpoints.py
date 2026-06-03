@@ -20,7 +20,9 @@ def list_checkpoint_history(
     limit: int = 20,
     page: int = 1,
 ) -> dict:
-    bundle = ctx.bundle(profile)
+    bundle, conn_err = ctx.open_bundle(profile)
+    if conn_err is not None:
+        return ctx.finish_connection_error(conn_err, profile=profile)
     try:
         config = thread_config(thread_id)
         history = bundle.checkpointer.list_checkpoints(config, limit=limit)
@@ -48,7 +50,9 @@ def get_checkpoint(
     *,
     profile: str | None = None,
 ) -> dict:
-    bundle = ctx.bundle(profile)
+    bundle, conn_err = ctx.open_bundle(profile)
+    if conn_err is not None:
+        return ctx.finish_connection_error(conn_err, profile=profile)
     try:
         config = thread_config(thread_id, checkpoint_id)
         tup = bundle.checkpointer.get_tuple(config)
@@ -73,7 +77,9 @@ def compare_checkpoints(
     *,
     profile: str | None = None,
 ) -> dict:
-    bundle = ctx.bundle(profile)
+    bundle, conn_err = ctx.open_bundle(profile)
+    if conn_err is not None:
+        return ctx.finish_connection_error(conn_err, profile=profile)
     try:
         tup_a = bundle.checkpointer.get_tuple(thread_config(thread_id, checkpoint_id_a))
         tup_b = bundle.checkpointer.get_tuple(thread_config(thread_id, checkpoint_id_b))
@@ -102,7 +108,9 @@ def summarize_thread(
     profile: str | None = None,
     page: int = 1,
 ) -> dict:
-    bundle = ctx.bundle(profile)
+    bundle, conn_err = ctx.open_bundle(profile)
+    if conn_err is not None:
+        return ctx.finish_connection_error(conn_err, profile=profile)
     try:
         tup = bundle.checkpointer.get_tuple(thread_config(thread_id))
         snap = checkpoint_tuple_to_snapshot(tup)

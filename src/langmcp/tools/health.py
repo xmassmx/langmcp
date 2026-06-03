@@ -62,7 +62,26 @@ def _probe_store(bundle, *, read_only: bool) -> tuple[bool | None, bool | None, 
 def health_check(ctx: ToolContext, profile: str | None = None) -> dict:
     info = ctx.profiles.profile_health_info(profile)
     profile_name = info["profile"]
-    bundle = ctx.bundle(profile_name)
+    bundle, conn_err = ctx.open_bundle(profile_name)
+    if conn_err is not None:
+        return ctx.finish(
+            {
+                "checkpointer_connected": False,
+                "store_connected": False if info["has_store"] else None,
+                "checkpointer_setup": False,
+                "store_setup": False if info["has_store"] else None,
+                "checkpointer_backend": info["checkpointer_backend"],
+                "store_backend": info.get("store_backend"),
+                "checkpointer_uri_redacted": info["checkpointer_uri_redacted"],
+                "store_uri_redacted": info.get("store_uri_redacted"),
+                "read_only": info["read_only"],
+                "has_store": info["has_store"],
+                "warning": conn_err.get("message"),
+                "error": conn_err.get("error"),
+                "package_versions": _package_versions(),
+            },
+            profile=profile_name,
+        )
     warnings: list[str] = []
     read_only = info["read_only"]
     try:
@@ -74,19 +93,6 @@ def health_check(ctx: ToolContext, profile: str | None = None) -> dict:
             warnings.append(store_warn)
     finally:
         bundle.close()
-
-    versions = {}
-    for pkg in (
-        "langgraph",
-        "langgraph-checkpoint",
-        "langgraph-checkpoint-postgres",
-        "mcp",
-        "langmcp",
-    ):
-        try:
-            versions[pkg] = importlib.metadata.version(pkg)
-        except importlib.metadata.PackageNotFoundError:
-            pass
 
     return ctx.finish(
         {
@@ -101,10 +107,26 @@ def health_check(ctx: ToolContext, profile: str | None = None) -> dict:
             "read_only": info["read_only"],
             "has_store": info["has_store"],
             "warning": "; ".join(warnings) if warnings else None,
-            "package_versions": versions,
+            "package_versions": _package_versions(),
         },
         profile=profile_name,
     )
+
+
+def _package_versions() -> dict[str, str]:
+    versions: dict[str, str] = {}
+    for pkg in (
+        "langgraph",
+        "langgraph-checkpoint",
+        "langgraph-checkpoint-postgres",
+        "mcp",
+        "langmcp",
+    ):
+        try:
+            versions[pkg] = importlib.metadata.version(pkg)
+        except importlib.metadata.PackageNotFoundError:
+            pass
+    return versions
 
 
 def list_profiles(ctx: ToolContext) -> dict:

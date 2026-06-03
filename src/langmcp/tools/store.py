@@ -23,7 +23,9 @@ def list_namespaces(
     prefix: str | None = None,
     max_depth: int | None = None,
 ) -> dict:
-    bundle = ctx.bundle(profile)
+    bundle, conn_err = ctx.open_bundle(profile)
+    if conn_err is not None:
+        return ctx.finish_connection_error(conn_err, profile=profile)
     err = ctx.require_store(bundle)
     if err:
         bundle.close()
@@ -49,7 +51,9 @@ def search_store(
     limit: int = 10,
     offset: int = 0,
 ) -> dict:
-    bundle = ctx.bundle(profile)
+    bundle, conn_err = ctx.open_bundle(profile)
+    if conn_err is not None:
+        return ctx.finish_connection_error(conn_err, profile=profile)
     err = ctx.require_store(bundle)
     if err:
         bundle.close()
@@ -104,7 +108,9 @@ def get_store_item(
     *,
     profile: str | None = None,
 ) -> dict:
-    bundle = ctx.bundle(profile)
+    bundle, conn_err = ctx.open_bundle(profile)
+    if conn_err is not None:
+        return ctx.finish_connection_error(conn_err, profile=profile)
     err = ctx.require_store(bundle)
     if err:
         bundle.close()
@@ -130,7 +136,9 @@ def summarize_user_memory(
     profile: str | None = None,
     application_context: str | None = None,
 ) -> dict:
-    bundle = ctx.bundle(profile)
+    bundle, conn_err = ctx.open_bundle(profile)
+    if conn_err is not None:
+        return ctx.finish_connection_error(conn_err, profile=profile)
     err = ctx.require_store(bundle)
     if err:
         bundle.close()
