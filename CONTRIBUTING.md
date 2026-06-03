@@ -32,6 +32,20 @@ Use the local test values from `docker-compose.test.yml`. They are for Docker
 integration tests only. Do not commit real database credentials or a real
 `langmcp.toml`.
 
+## Branching
+
+- **`develop`** — integration branch; open all feature and fix PRs here.
+- **`main`** — production; merge from `develop` when releasing (not for day-to-day work).
+
+```bash
+git fetch origin
+git switch develop
+git pull
+git switch -c feature/my-change
+```
+
+When opening a PR on GitHub, set the base branch to **`develop`**.
+
 ## Pull Request Guidelines
 
 - Keep changes focused and explain the debugging workflow they support.
