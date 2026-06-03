@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Development workflow: `develop` integration branch, Dependabot targets `develop`, PR template and docs.
 - CI: fail PRs that change `src/` or `tests/` without updating `CHANGELOG.md` (Dependabot exempt).
 - Backend connectivity helpers that apply PostgreSQL connection timeouts and classify unreachable persistence backends.
 - Unit coverage for backend timeout handling and unreachable-backend health responses.
