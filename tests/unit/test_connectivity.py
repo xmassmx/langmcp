@@ -8,14 +8,13 @@ import pytest
 
 from langmcp.connectivity import (
     backend_unreachable_error,
-    connect_timeout_seconds,
     is_backend_connection_error,
     with_connect_timeout,
 )
 from langmcp.discovery import list_threads_for_profile
 from langmcp.profiles import ProfileManager
-from langmcp.tools.context import ToolContext
 from langmcp.tools import threads
+from langmcp.tools.context import ToolContext
 
 
 def test_with_connect_timeout_appends_query_param():

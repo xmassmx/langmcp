@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from langmcp.config import backend_type_from_uri, sanitize_error_message
+from langmcp.config import sanitize_error_message
 
 _DEFAULT_CONNECT_TIMEOUT = 5.0
+_HOST_PORT_IN_MESSAGE = re.compile(r'server at "[^"]+", port \d+')
 
 
 def connect_timeout_seconds() -> float:
@@ -67,7 +69,10 @@ def backend_unreachable_error(
     role: str = "checkpointer",
 ) -> dict[str, Any]:
     """Structured tool response when a persistence backend cannot be reached."""
-    detail = sanitize_error_message(str(exc))
+    detail = _HOST_PORT_IN_MESSAGE.sub(
+        "server at [redacted host], port [redacted]",
+        sanitize_error_message(str(exc)),
+    )
     return {
         "error": "backend_unreachable",
         "message": (

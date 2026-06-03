@@ -40,7 +40,10 @@ class ToolContext:
         *,
         profile: str | None = None,
     ) -> dict:
-        return self.finish(err, profile=err.get("profile", self.profiles.active_profile_name(profile)))
+        return self.finish(
+            err,
+            profile=err.get("profile", self.profiles.active_profile_name(profile)),
+        )
 
     def max_chars(self) -> int:
         return self.profiles.max_response_chars()
