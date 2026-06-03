@@ -36,6 +36,7 @@ integration tests only. Do not commit real database credentials or a real
 
 - Keep changes focused and explain the debugging workflow they support.
 - Add or update tests for behavior changes.
+- Update `CHANGELOG.md` under `## [Unreleased]` when changing `src/` or `tests/`.
 - Keep the default surface read-only unless a future roadmap item explicitly
   introduces a write workflow.
 - Do not log secrets, DSNs, or raw credentials.
