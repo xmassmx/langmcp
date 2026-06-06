@@ -110,6 +110,7 @@ Environment overrides:
 - `POSTGRES_URI`
 - `LANGMCP_CHECKPOINTER_URI`
 - `LANGMCP_STORE_URI`
+- `LANGMCP_APPS_ENABLED` (`false`, `0`, `no`, or `off` disables MCP Apps UI tools/resources)
 
 ## Verify Setup
 
@@ -147,6 +148,20 @@ Start the server directly:
 
 ```bash
 langmcp serve --config ./langmcp.toml
+```
+
+## MCP Apps Inspector
+
+When the host supports MCP Apps, LangMCP registers `show_inspector` and the
+bundled `ui://langmcp/inspector.html` UI. The inspector focuses on the main
+debugging flow: Health → Threads → Thread Debugger, with checkpoint comparison,
+context analysis, state inspection, and memory diagnostics inside the thread
+workspace.
+
+Disable the app surface while keeping normal MCP tools/resources available:
+
+```bash
+LANGMCP_APPS_ENABLED=false langmcp serve --config ./langmcp.toml
 ```
 
 ## Example Assistant Prompts

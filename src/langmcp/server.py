@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
+from langmcp.apps.inspector import TOOL_UI_META, apps_enabled, register_inspector
 from langmcp.profiles import ProfileManager
 from langmcp.tools import analysis_tools, checkpoints, health, store, threads
 from langmcp.tools.context import ToolContext
@@ -29,7 +30,7 @@ def create_mcp(profiles: ProfileManager) -> FastMCP:
         """List configured profile names and backend types (no secrets)."""
         return health.list_profiles(ctx)
 
-    @mcp.tool()
+    @mcp.tool(meta=TOOL_UI_META if apps_enabled() else None)
     def list_threads(
         profile: str | None = None,
         limit: int = 50,
@@ -365,6 +366,9 @@ Use `compare_checkpoints`, inspect either checkpoint if needed, and explain:
 - message count delta
 - user-visible behavior change
 - whether the change looks expected or suspicious"""
+
+    if apps_enabled():
+        register_inspector(mcp, ctx)
 
     @mcp.prompt()
     def inspect_user_memory(

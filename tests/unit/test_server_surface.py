@@ -19,7 +19,10 @@ async def test_mcp_registers_resources_and_prompts(sample_config, sqlite_path, m
     templates = await mcp.list_resource_templates()
     prompts = await mcp.list_prompts()
 
-    assert [str(resource.uri) for resource in resources] == ["langmcp://profiles"]
+    assert {str(resource.uri) for resource in resources} >= {
+        "langmcp://profiles",
+        "ui://langmcp/inspector.html",
+    }
     assert {template.uriTemplate for template in templates} >= {
         "langmcp://profiles/{profile}/health",
         "langmcp://profiles/{profile}/threads",

@@ -19,6 +19,9 @@ venv/
 # LangGraph local data
 .langgraph/
 
+# MCP App frontend
+apps/inspector/node_modules/
+
 # Test / tooling
 .pytest_cache/
 .ruff_cache/
@@ -42,3 +45,4 @@ ARTICLE.md
 LAUNCH_CHECKLIST.md
 uv.lock
 docs/
+.cursor/

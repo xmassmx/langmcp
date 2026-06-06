@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- MCP Apps inspector: `show_inspector` entry tool, `ui://langmcp/inspector.html` resource, focused Health → Threads → Thread Debugger UI, checkpoint compare/context/state/memory diagnostics, dummy preview script, and `LANGMCP_APPS_ENABLED` toggle. Build with `apps/inspector` (`npm run build`).
 - Development workflow: `develop` integration branch, Dependabot targets `develop`, PR template and docs.
 - CI: fail PRs that change `src/` or `tests/` without updating `CHANGELOG.md` (Dependabot exempt).
 - Backend connectivity helpers that apply PostgreSQL connection timeouts and classify unreachable persistence backends.
