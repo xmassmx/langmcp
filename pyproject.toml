@@ -44,9 +44,9 @@ all = [
 dev = [
     "pytest==9.0.3",
     "pytest-asyncio==1.4.0",
-    "ruff==0.15.15",
+    "ruff==0.15.16",
     "httpx==0.28.1",
-    "langchain-core==1.4.0",
+    "langchain-core==1.4.3",
 ]
 
 [project.scripts]
