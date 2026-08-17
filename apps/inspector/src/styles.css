@@ -1,4 +1,8 @@
 :root {
+  --host-safe-top: 0px;
+  --host-safe-right: 0px;
+  --host-safe-bottom: 0px;
+  --host-safe-left: 0px;
   color-scheme: dark;
   --bg: #0d1117;
   --bg-soft: #161b22;
@@ -123,7 +127,11 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 10px 12px;
-  padding: 18px 20px;
+  padding:
+    calc(18px + var(--host-safe-top))
+    calc(20px + var(--host-safe-right))
+    18px
+    calc(20px + var(--host-safe-left));
   border-bottom: 1px solid var(--border);
   background: var(--header-bg);
   min-height: 64px;
@@ -992,4 +1000,32 @@ summary {
   .row {
     padding-inline: 8px;
   }
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + var(--host-safe-bottom));
+  transform: translateX(-50%) translateY(12px);
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--surface-strong);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 20;
+}
+
+.toast[data-visible="true"] {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.banner.connection-error {
+  border-color: color-mix(in srgb, var(--err) 45%, var(--border));
 }

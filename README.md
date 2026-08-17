@@ -152,17 +152,40 @@ langmcp serve --config ./langmcp.toml
 
 ## MCP Apps Inspector
 
-When the host supports MCP Apps, LangMCP registers `show_inspector` and the
-bundled `ui://langmcp/inspector.html` UI. The inspector focuses on the main
-debugging flow: Health → Threads → Thread Debugger, with checkpoint comparison,
-context analysis, state inspection, and memory diagnostics inside the thread
-workspace.
+> **Development status:** The Inspector is experimental and currently available from
+> source only. It is not included in the published PyPI `0.1.1` package, and its UI
+> and payload contract may change before release.
+
+When the host supports MCP Apps, LangMCP registers `show_inspector`, `list_threads`
+(with UI metadata), and the bundled `ui://langmcp/inspector.html` resource. The
+inspector focuses on the main debugging flow: Health → Threads → Thread Debugger,
+with checkpoint comparison, context analysis, state inspection, and memory diagnostics
+inside the thread workspace.
+
+Entry tools return a **short text summary** for the model and the full payload in
+`structuredContent` for the embedded UI. After changing the frontend, rebuild and
+reload the MCP server:
+
+```bash
+cd apps/inspector && npm install && npm run build
+# restart langmcp in your MCP host
+```
+
+Local app debugging with MCP traffic inspection (dev dependency):
+
+```bash
+pip install "langmcp[dev]"
+fastmcp dev apps src/langmcp/server.py:dev_mcp
+```
 
 Disable the app surface while keeping normal MCP tools/resources available:
 
 ```bash
 LANGMCP_APPS_ENABLED=false langmcp serve --config ./langmcp.toml
 ```
+
+See [`apps/inspector/README.md`](apps/inspector/README.md) for build, host-context, and
+preview details.
 
 ## Example Assistant Prompts
 

@@ -4,19 +4,39 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import CallToolResult
 
+from langmcp.apps.registry import make_ui_tool_decorator
+from langmcp.apps.responses import (
+    INSPECTOR_SCHEMA_VERSION,
+    app_tool_result,
+    inspector_open_summary,
+)
 from langmcp.tools import analysis_tools, checkpoints, health, store, threads
 from langmcp.tools.context import ToolContext
 
 INSPECTOR_URI = "ui://langmcp/inspector.html"
 INSPECTOR_MIME = "text/html;profile=mcp-app"
-TOOL_UI_META = {"ui": {"resourceUri": INSPECTOR_URI}}
+TOOL_UI_META = {
+    "ui": {
+        "resourceUri": INSPECTOR_URI,
+        "visibility": ["model", "app"],
+        "prefersBorder": False,
+    }
+}
+RESOURCE_UI_META = {
+    "ui": {
+        "prefersBorder": False,
+        "permissions": {"clipboard": True},
+    }
+}
 APP_ONLY_META = {"ui": {"visibility": ["app"]}}
 
 InspectorView = Literal["health", "threads", "thread", "compare", "memory"]
+InspectorError = dict[str, str] | str
 FALSEY_ENV_VALUES = {"0", "false", "no", "off"}
 
 
@@ -43,17 +63,21 @@ def load_inspector_html() -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _backend_error(tool: str, message: str, *, code: str = "backend_error") -> InspectorError:
+    return {"code": code, "message": message, "tool": tool}
+
+
 def _build_health_seed(ctx: ToolContext, profile: str | None) -> dict:
     profiles_payload = health.list_profiles(ctx)
     profile_rows = profiles_payload.get("profiles", [])
     checks: list[dict] = []
-    errors: list[str] = []
+    errors: list[InspectorError] = []
     for row in profile_rows:
         name = row["name"]
         try:
             checks.append(health.health_check(ctx, name))
         except Exception as exc:  # pragma: no cover - defensive
-            errors.append(f"health_check({name}): {exc}")
+            errors.append(_backend_error("health_check", f"health_check({name}): {exc}"))
     active = ctx.profiles.active_profile_name(profile)
     return {
         "profiles": profiles_payload,
@@ -73,11 +97,11 @@ def _build_threads_seed(
     return threads.list_threads(ctx, profile=profile, limit=limit, offset=offset)
 
 
-def _capture(errors: list[str], label: str, fn) -> dict | None:
+def _capture(errors: list[InspectorError], label: str, fn) -> dict | None:
     try:
         return fn()
     except Exception as exc:  # pragma: no cover - defensive guard for UI seeds
-        errors.append(f"{label}: {exc}")
+        errors.append(_backend_error(label, f"{label}: {exc}"))
         return None
 
 
@@ -88,10 +112,15 @@ def _build_thread_seed(
     *,
     user_id: str | None = None,
     namespace_prefix: str | None = None,
-    errors: list[str],
+    errors: list[InspectorError],
 ) -> dict:
     if not thread_id:
-        errors.append("thread_id is required for the Thread Debugger.")
+        errors.append(
+            {
+                "code": "validation_error",
+                "message": "thread_id is required for the Thread Debugger.",
+            }
+        )
         return {}
 
     seed: dict = {"thread_id": thread_id}
@@ -156,9 +185,9 @@ def build_inspector_payload(
     thread_id: str | None = None,
     user_id: str | None = None,
     namespace_prefix: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     active = ctx.profiles.active_profile_name(profile)
-    errors: list[str] = []
+    errors: list[InspectorError] = []
     seed: dict = {}
 
     if view == "health":
@@ -185,10 +214,16 @@ def build_inspector_payload(
         }
     else:
         errors.append(
-            f"View '{view}' is not a top-level inspector screen. Use the Thread Debugger."
+            {
+                "code": "validation_error",
+                "message": (
+                    f"View '{view}' is not a top-level inspector screen. Use the Thread Debugger."
+                ),
+            }
         )
 
     return {
+        "schema_version": INSPECTOR_SCHEMA_VERSION,
         "view": view,
         "profile": active,
         "read_only": True,
@@ -199,6 +234,7 @@ def build_inspector_payload(
 
 def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
     """Register inspector UI resource, entry tool, and app-only backend tools."""
+    ui_tool = make_ui_tool_decorator(mcp, APP_ONLY_META)
 
     @mcp.resource(
         INSPECTOR_URI,
@@ -206,6 +242,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
         title="LangMCP Inspector UI",
         description="Bundled HTML for the LangMCP Inspector MCP App.",
         mime_type=INSPECTOR_MIME,
+        meta=RESOURCE_UI_META,
     )
     def inspector_ui_resource() -> str:
         return load_inspector_html()
@@ -226,10 +263,10 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
         checkpoint_id_b: str | None = None,
         user_id: str | None = None,
         namespace_prefix: str | None = None,
-    ) -> dict:
+    ) -> CallToolResult:
         """Open the in-chat inspector for LangGraph checkpoint and store debugging."""
         del checkpoint_id_a, checkpoint_id_b
-        return build_inspector_payload(
+        payload = build_inspector_payload(
             ctx,
             view,
             profile,
@@ -237,8 +274,13 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
             user_id=user_id,
             namespace_prefix=namespace_prefix,
         )
+        active = str(payload["profile"])
+        return app_tool_result(
+            payload,
+            summary=inspector_open_summary(view, active, thread_id=thread_id),
+        )
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_list_threads")
     def __ui_list_threads(
         profile: str | None = None,
         limit: int = 50,
@@ -247,17 +289,17 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
         """List threads (iframe-only)."""
         return threads.list_threads(ctx, profile=profile, limit=limit, offset=offset)
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_health_check")
     def __ui_health_check(profile: str | None = None) -> dict:
         """Health check for a profile (iframe-only)."""
         return health.health_check(ctx, profile)
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_list_profiles")
     def __ui_list_profiles() -> dict:
         """List configured profiles (iframe-only)."""
         return health.list_profiles(ctx)
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_summarize_thread")
     def __ui_summarize_thread(
         thread_id: str,
         profile: str | None = None,
@@ -266,7 +308,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
         """Summarize a thread transcript (iframe-only)."""
         return checkpoints.summarize_thread(ctx, thread_id, profile=profile, page=page)
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_list_checkpoint_history")
     def __ui_list_checkpoint_history(
         thread_id: str,
         limit: int = 20,
@@ -278,7 +320,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
             ctx, thread_id, profile=profile, limit=limit, page=page
         )
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_get_checkpoint")
     def __ui_get_checkpoint(
         thread_id: str,
         checkpoint_id: str,
@@ -287,7 +329,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
         """Get a checkpoint snapshot (iframe-only)."""
         return checkpoints.get_checkpoint(ctx, thread_id, checkpoint_id, profile=profile)
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_get_thread_state")
     def __ui_get_thread_state(
         thread_id: str,
         checkpoint_id: str | None = None,
@@ -298,7 +340,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
             ctx, thread_id, checkpoint_id=checkpoint_id, profile=profile
         )
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_analyze_context_window")
     def __ui_analyze_context_window(
         thread_id: str,
         profile: str | None = None,
@@ -309,7 +351,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
             ctx, thread_id, profile=profile, model_hint=model_hint
         )
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_compare_checkpoints")
     def __ui_compare_checkpoints(
         thread_id: str,
         checkpoint_id_a: str,
@@ -325,7 +367,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
             profile=profile,
         )
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_summarize_user_memory")
     def __ui_summarize_user_memory(
         user_id: str,
         application_context: str | None = None,
@@ -336,7 +378,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
             ctx, user_id, profile=profile, application_context=application_context
         )
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_analyze_memory_gaps")
     def __ui_analyze_memory_gaps(
         thread_id: str,
         user_id: str,
@@ -352,7 +394,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
             expected_namespace=expected_namespace,
         )
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_list_namespaces")
     def __ui_list_namespaces(
         prefix: str | None = None,
         max_depth: int | None = None,
@@ -361,7 +403,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
         """List store namespaces for advanced lookup (iframe-only)."""
         return store.list_namespaces(ctx, profile=profile, prefix=prefix, max_depth=max_depth)
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_search_store")
     def __ui_search_store(
         namespace_prefix: str,
         query: str | None = None,
@@ -381,7 +423,7 @@ def register_inspector(mcp: FastMCP, ctx: ToolContext) -> None:
             offset=offset,
         )
 
-    @mcp.tool(meta=APP_ONLY_META)
+    @ui_tool("__ui_get_store_item")
     def __ui_get_store_item(
         namespace: str,
         key: str,

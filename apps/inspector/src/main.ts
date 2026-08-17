@@ -1,7 +1,7 @@
 import { App } from "@modelcontextprotocol/ext-apps";
 import { callUiTool, extractThreadIds, parseToolJson } from "./api.js";
 import { buildMockPayload, buildMockToolResult } from "./mockData.js";
-import type { InspectorPayload, InspectorView, ProfileRow } from "./types.js";
+import type { HostContext, InspectorError, InspectorPayload, InspectorView, ProfileRow } from "./types.js";
 import { renderHealthView } from "./views/health.js";
 import { renderThreadView } from "./views/thread.js";
 import { renderThreadsView } from "./views/threads.js";
@@ -25,8 +25,11 @@ const mockView = params.get("mock") as InspectorView | null;
 const useMockData = mockView === "health" || mockView === "threads" || mockView === "thread";
 const themeQuery = window.matchMedia("(prefers-color-scheme: light)");
 const themeStorageKey = "langmcp-inspector-theme";
+const supportedSchemaVersion = 1;
 
 let payload: InspectorPayload | null = null;
+let hostThemeActive = false;
+let schemaWarningShown = false;
 const threadPageSize = 50;
 type ThemeChoice = "system" | "dark" | "light";
 
@@ -91,9 +94,33 @@ const THEME_ICONS = {
   dark: `<svg class="theme-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.5 11.2a6.25 6.25 0 1 1-6.7-9.8 7.25 7.25 0 0 0 6.7 9.8z"/></svg>`,
 } as const;
 
+function applyHostContext(ctx: HostContext): void {
+  const insets = ctx.safeAreaInsets;
+  if (insets) {
+    const root = document.documentElement;
+    root.style.setProperty("--host-safe-top", `${insets.top ?? 0}px`);
+    root.style.setProperty("--host-safe-right", `${insets.right ?? 0}px`);
+    root.style.setProperty("--host-safe-bottom", `${insets.bottom ?? 0}px`);
+    root.style.setProperty("--host-safe-left", `${insets.left ?? 0}px`);
+  }
+
+  if (ctx.theme === "light" || ctx.theme === "dark") {
+    hostThemeActive = true;
+    document.documentElement.dataset.theme = ctx.theme;
+    document.documentElement.dataset.themeSource = "host";
+    themeToggleSync?.();
+    return;
+  }
+
+  hostThemeActive = false;
+  delete document.documentElement.dataset.themeSource;
+  applyTheme();
+}
+
 function renderThemeToggle(container: HTMLElement): void {
   const group = document.createElement("div");
   group.className = "theme-toggle";
+  group.hidden = hostThemeActive;
   group.setAttribute("role", "group");
   group.setAttribute("aria-label", "Theme");
 
@@ -213,17 +240,31 @@ function renderTabs(): void {
   }
 }
 
-function showErrors(errors: string[]): void {
-  for (const msg of errors) {
+function formatError(error: InspectorError): string {
+  if (typeof error === "string") return error;
+  return error.message;
+}
+
+function showErrors(errors: InspectorError[]): void {
+  for (const error of errors) {
+    const msg = formatError(error);
+    const code = typeof error === "object" ? error.code : undefined;
     const banner = document.createElement("div");
-    banner.className = "banner err";
-    banner.textContent = msg;
+    banner.className = code === "backend_unreachable" ? "banner err connection-error" : "banner err";
+    banner.textContent = code === "backend_unreachable" ? `Connection error: ${msg}` : msg;
     mainEl.prepend(banner);
   }
 }
 
+function warnUnknownSchema(version: number | undefined): void {
+  if (schemaWarningShown || version == null || version === supportedSchemaVersion) return;
+  schemaWarningShown = true;
+  console.warn(`LangMCP Inspector: unsupported schema_version ${version}`);
+}
+
 function applyPayload(data: InspectorPayload): void {
   payload = data;
+  warnUnknownSchema(data.schema_version);
   document.body.classList.toggle("tool-scope", data.scope === "tool");
   renderHeader();
   renderTabs();
@@ -355,6 +396,12 @@ function ingestToolResult(result: Parameters<NonNullable<typeof app.ontoolresult
 }
 
 app.ontoolresult = ingestToolResult;
+
+const hostContextHandler = (ctx: HostContext) => applyHostContext(ctx);
+app.onhostcontextchanged = hostContextHandler;
+const initialHostContext = (app as { getHostContext?: () => HostContext | undefined }).getHostContext?.();
+if (initialHostContext) applyHostContext(initialHostContext);
+
 if (useMockData) {
   applyPayload(buildMockPayload(mockView));
 } else {

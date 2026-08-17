@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import CallToolResult
 
 from langmcp.apps.inspector import TOOL_UI_META, apps_enabled, register_inspector
+from langmcp.apps.responses import app_tool_result, threads_list_summary
 from langmcp.profiles import ProfileManager
 from langmcp.tools import analysis_tools, checkpoints, health, store, threads
 from langmcp.tools.context import ToolContext
@@ -30,14 +32,38 @@ def create_mcp(profiles: ProfileManager) -> FastMCP:
         """List configured profile names and backend types (no secrets)."""
         return health.list_profiles(ctx)
 
-    @mcp.tool(meta=TOOL_UI_META if apps_enabled() else None)
-    def list_threads(
-        profile: str | None = None,
-        limit: int = 50,
-        offset: int = 0,
-    ) -> dict:
-        """List thread IDs discovered from the checkpointer backend."""
-        return threads.list_threads(ctx, profile=profile, limit=limit, offset=offset)
+    if apps_enabled():
+
+        @mcp.tool(meta=TOOL_UI_META)
+        def list_threads(
+            profile: str | None = None,
+            limit: int = 50,
+            offset: int = 0,
+        ) -> CallToolResult:
+            """List thread IDs discovered from the checkpointer backend."""
+            payload = threads.list_threads(ctx, profile=profile, limit=limit, offset=offset)
+            rows = payload.get("threads", [])
+            count = len(rows) if isinstance(rows, list) else 0
+            active = str(payload.get("profile", ctx.profiles.active_profile_name(profile)))
+            return app_tool_result(
+                payload,
+                summary=threads_list_summary(
+                    count,
+                    active,
+                    truncated=bool(payload.get("truncated")),
+                ),
+            )
+
+    else:
+
+        @mcp.tool()
+        def list_threads(
+            profile: str | None = None,
+            limit: int = 50,
+            offset: int = 0,
+        ) -> dict:
+            """List thread IDs discovered from the checkpointer backend."""
+            return threads.list_threads(ctx, profile=profile, limit=limit, offset=offset)
 
     @mcp.tool()
     def get_thread_state(
@@ -396,6 +422,11 @@ Return:
 - recommended cleanup or follow-up checks"""
 
     return mcp
+
+
+def dev_mcp() -> FastMCP:
+    """Factory entry point for `fastmcp dev apps src/langmcp/server.py:dev_mcp`."""
+    return create_mcp(ProfileManager())
 
 
 def run_server(profiles: ProfileManager) -> None:

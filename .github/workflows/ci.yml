@@ -17,6 +17,20 @@ jobs:
       - name: Require CHANGELOG.md for src/ or tests/ changes
         run: python3 scripts/check_changelog.py
 
+  inspector-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/inspector/package-lock.json
+      - run: npm ci
+        working-directory: apps/inspector
+      - run: npm run build
+        working-directory: apps/inspector
+
   lint:
     runs-on: ubuntu-latest
     steps:

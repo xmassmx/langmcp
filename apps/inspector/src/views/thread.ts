@@ -131,6 +131,12 @@ export function renderThreadView(
 
   const renderTimeline = () => {
     const section = card("Checkpoints");
+    const history = data.history as Record<string, unknown> | undefined;
+    if (history?.truncated) {
+      section.appendChild(
+        banner("warn", "Checkpoint history truncated — load more pages or ask the model for full history."),
+      );
+    }
     const items = checkpoints(data);
     if (items.length === 0) {
       section.appendChild(elem("p", "empty", "No checkpoints found for this thread."));

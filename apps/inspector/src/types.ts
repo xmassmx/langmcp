@@ -1,12 +1,31 @@
 export type InspectorView = "health" | "threads" | "thread" | "compare" | "memory";
 
+export interface InspectorErrorObject {
+  code?: string;
+  message: string;
+  tool?: string;
+}
+
+export type InspectorError = string | InspectorErrorObject;
+
 export interface InspectorPayload {
+  schema_version?: number;
   view: InspectorView;
   profile: string;
   read_only: boolean;
   seed: Record<string, unknown>;
-  errors: string[];
+  errors: InspectorError[];
   scope?: "inspector" | "tool";
+}
+
+export interface HostContext {
+  theme?: "light" | "dark";
+  safeAreaInsets?: {
+    top?: number;
+    right?: number;
+    bottom?: number;
+    left?: number;
+  };
 }
 
 export interface ProfileRow {
