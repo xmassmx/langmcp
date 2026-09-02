@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-09-02
+
 ### Added
 
 - Development workflow: `develop` integration branch, Dependabot targets `develop`, PR template and docs.
@@ -16,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- PostgreSQL store health checks no longer fail on healthy stores because of a zero-depth namespace probe.
+- User-memory summaries now support profile-level and per-call namespace templates instead of assuming memory is stored directly under `{user_id}`.
 - Tool calls now return structured `backend_unreachable` errors instead of hanging on unavailable checkpoint or store backends.
 - Connection failure messages redact sensitive backend details before returning them to MCP clients.
 
@@ -69,5 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `read_only=true` enforced in v0.1
 - No raw DSN parameters on MCP tools
 
+[Unreleased]: https://github.com/xmassmx/langmcp/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/xmassmx/langmcp/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/xmassmx/langmcp/releases/tag/v0.1.1
 [0.1.0]: https://github.com/xmassmx/langmcp/releases/tag/v0.1.0

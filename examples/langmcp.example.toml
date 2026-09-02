@@ -6,6 +6,7 @@ max_response_chars = 250000
 [profiles.dev]
 checkpointer = "${POSTGRES_URI}"
 store = "${POSTGRES_URI}"
+user_namespace = "{user_id}"
 
 [profiles.local_sqlite]
 checkpointer = "sqlite:///./.langgraph/checkpoints.db"

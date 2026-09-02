@@ -39,7 +39,7 @@ def _probe_store(bundle, *, read_only: bool) -> tuple[bool | None, bool | None, 
         return None, None, None
 
     try:
-        bundle.store.list_namespaces(max_depth=0)
+        bundle.store.list_namespaces(max_depth=1)
     except Exception as exc:
         return False, False, f"Store: {sanitize_error_message(exc)}"
 
