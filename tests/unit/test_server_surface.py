@@ -18,6 +18,7 @@ async def test_mcp_registers_resources_and_prompts(sample_config, sqlite_path, m
     resources = await mcp.list_resources()
     templates = await mcp.list_resource_templates()
     prompts = await mcp.list_prompts()
+    tools = await mcp.list_tools()
 
     assert [str(resource.uri) for resource in resources] == ["langmcp://profiles"]
     assert {template.uriTemplate for template in templates} >= {
@@ -38,6 +39,10 @@ async def test_mcp_registers_resources_and_prompts(sample_config, sqlite_path, m
         "compare_thread_checkpoints",
         "inspect_user_memory",
     }
+    summarize_schema = next(
+        tool.inputSchema for tool in tools if tool.name == "summarize_user_memory"
+    )
+    assert "namespace_prefix" in summarize_schema["properties"]
 
 
 @pytest.mark.asyncio

@@ -94,6 +94,7 @@ max_response_chars = 250000
 [profiles.dev]
 checkpointer = "${POSTGRES_URI}"
 store = "${POSTGRES_URI}"
+user_namespace = "users/{user_id}"
 
 [profiles.local_sqlite]
 checkpointer = "sqlite:///./.langgraph/checkpoints.db"
@@ -101,6 +102,11 @@ checkpointer = "sqlite:///./.langgraph/checkpoints.db"
 [profiles.local_redis]
 checkpointer = "redis://localhost:6379/0"
 ```
+
+Set `user_namespace` to the namespace template your graph uses for long-term
+memory. The default is `{user_id}` for compatibility. For stores organized as
+`users/<user_id>/...`, use `users/{user_id}`. The `summarize_user_memory` tool
+also accepts `namespace_prefix` to override the profile template for one call.
 
 Environment overrides:
 
@@ -189,7 +195,7 @@ All tools accept optional `profile` unless noted. Responses include `profile`,
 | `list_namespaces` | Store namespace tuples |
 | `search_store` | Search under namespace prefix |
 | `get_store_item` | Full store value by key |
-| `summarize_user_memory` | Grouped keys under user prefix |
+| `summarize_user_memory` | Grouped keys under a configured or explicit user namespace template |
 
 ## MCP Resources
 

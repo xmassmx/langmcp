@@ -164,11 +164,16 @@ def create_mcp(profiles: ProfileManager) -> FastMCP:
     def summarize_user_memory(
         user_id: str,
         application_context: str | None = None,
+        namespace_prefix: str | None = None,
         profile: str | None = None,
     ) -> dict:
-        """Summarize store items grouped under a user_id namespace prefix."""
+        """Summarize memory under the profile or explicit user namespace template."""
         return store.summarize_user_memory(
-            ctx, user_id, profile=profile, application_context=application_context
+            ctx,
+            user_id,
+            profile=profile,
+            application_context=application_context,
+            namespace_prefix=namespace_prefix,
         )
 
     @mcp.resource(

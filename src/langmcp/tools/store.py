@@ -16,6 +16,14 @@ def _parse_namespace(prefix: str | None) -> tuple[str, ...] | None:
     return tuple(p.strip() for p in prefix.split("/") if p.strip())
 
 
+def _render_user_namespace(template: str, user_id: str) -> tuple[str, ...]:
+    """Render user_id without treating slashes inside the ID as separators."""
+    parts = _parse_namespace(template)
+    if not parts:
+        raise ValueError("User memory namespace cannot be empty")
+    return tuple(part.replace("{user_id}", user_id) for part in parts)
+
+
 def list_namespaces(
     ctx: ToolContext,
     *,
@@ -135,6 +143,7 @@ def summarize_user_memory(
     *,
     profile: str | None = None,
     application_context: str | None = None,
+    namespace_prefix: str | None = None,
 ) -> dict:
     bundle, conn_err = ctx.open_bundle(profile)
     if conn_err is not None:
@@ -144,12 +153,16 @@ def summarize_user_memory(
         bundle.close()
         return ctx.finish(err, profile=bundle.profile_name)
     try:
-        items = bundle.store.search((user_id,), limit=100, offset=0)
+        _, profile_config = ctx.profiles.get_profile(bundle.profile_name)
+        namespace_template = namespace_prefix or profile_config.user_namespace
+        namespace = _render_user_namespace(namespace_template, user_id)
+        items = bundle.store.search(namespace, limit=100, offset=0)
         summary = summarize_user_memory_items(
             user_id,
             items,
             application_context=application_context,
         )
+        summary["namespace_prefix"] = list(namespace)
         return ctx.finish(summary, profile=bundle.profile_name)
     finally:
         bundle.close()

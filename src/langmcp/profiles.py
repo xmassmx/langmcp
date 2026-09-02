@@ -60,7 +60,12 @@ class ProfileManager:
                 cp = expand_env(str(cfg.get("checkpointer", "")))
                 store_val = cfg.get("store")
                 store = expand_env(str(store_val)) if store_val else None
-                self._profiles[name] = ProfileConfig(checkpointer=cp, store=store)
+                user_namespace = expand_env(str(cfg.get("user_namespace", "{user_id}")))
+                self._profiles[name] = ProfileConfig(
+                    checkpointer=cp,
+                    store=store,
+                    user_namespace=user_namespace,
+                )
 
     @property
     def config_path(self) -> Path | None:

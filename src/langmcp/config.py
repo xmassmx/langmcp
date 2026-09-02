@@ -96,6 +96,7 @@ def backend_type_from_uri(uri: str) -> str:
 class ProfileConfig(BaseModel):
     checkpointer: str
     store: str | None = None
+    user_namespace: str = "{user_id}"
 
 
 class DefaultsConfig(BaseModel):
@@ -120,7 +121,11 @@ def apply_env_overrides(
 ) -> ProfileConfig:
     cp = settings.checkpointer_uri or profile.checkpointer
     st = settings.store_uri or profile.store
-    return ProfileConfig(checkpointer=expand_env(cp), store=expand_env(st) if st else None)
+    return ProfileConfig(
+        checkpointer=expand_env(cp),
+        store=expand_env(st) if st else None,
+        user_namespace=expand_env(profile.user_namespace),
+    )
 
 
 def load_toml_dict(path: Path) -> dict[str, Any]:
