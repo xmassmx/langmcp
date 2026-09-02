@@ -51,6 +51,7 @@ def test_health_check_read_only_skips_setup(health_profile, monkeypatch):
     assert result["store_connected"] is True
     assert result["store_setup"] is False
     assert result["warning"] is None
+    mock_store.list_namespaces.assert_called_once_with(max_depth=1)
     mock_cp.setup.assert_not_called()
     mock_store.setup.assert_not_called()
     mock_bundle.close.assert_called_once()
